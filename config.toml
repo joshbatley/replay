@@ -1,0 +1,5 @@
+current = "curl https://localhost:5000"
+
+[scripts]
+example = "curl https://localhost:5001"
+example2 = "curl https://localhost:5002"

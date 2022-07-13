@@ -17,7 +17,6 @@ pub struct Commands {
 
     // #[clap(short, long, value_parser)]
     // pub edit: String,
-
     #[clap(short, long, value_parser)]
     pub list: bool,
 

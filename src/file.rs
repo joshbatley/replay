@@ -54,16 +54,23 @@ impl File {
         cmd
     }
 
-    pub fn save_cmd(&mut self, key: &str, script: Cmd) {
-        let config = self.config.clone();
-        let mut all_scripts = config.get("scripts").unwrap();
-        let all_scripts = all_scripts.as_table_mut().unwrap();
-        all_scripts.insert(key, script.to_toml());
-        // all_scripts.to_string()
-        self.config = config.clone();
-        // if key exists
-        // update
-        // append to bottom
+    pub fn save_cmd(&mut self, key: &str, cmd: &Cmd) {
+        let all_scripts = self.config.get_mut("scripts").unwrap();
+        if all_scripts.get(key).is_some() {
+            let script = all_scripts
+                .get_mut(key)
+                .unwrap()
+                .as_table_like_mut()
+                .unwrap();
+            script.insert("script", toml_edit::value(cmd.script.to_string()));
+            script.insert("added", toml_edit::value(cmd.added.to_string()));
+            script.insert("timeout", toml_edit::value(cmd.timeout.to_string()));
+        } else {
+            all_scripts
+                .as_table_mut()
+                .unwrap()
+                .insert(key, cmd.to_toml().to_owned());
+        }
     }
 
     // pub fn show_all_scripts(self) {}
@@ -83,8 +90,22 @@ mod test {
             last_runs_output: None,
         };
         let mut file = File::new();
-        let t = file.save_cmd("new-script", cmd);
-        // println!("{}", t);
-        file.save_file();
+        file.save_cmd("new-script", &cmd);
+        assert!(file.config.to_string().contains("new-script"));
+    }
+
+    #[test]
+    fn save_cmd_updates() {
+        let cmd = Cmd {
+            script: "ls -lsa".to_string(),
+            added: "2022-07-04T16:05:32.032Z".to_string(),
+            timeout: 0,
+            last_runs_successful: None,
+            last_runs_output: None,
+        };
+
+        let mut file = File::new();
+        file.save_cmd("example", &cmd);
+        assert!(file.config.to_string().contains("ls -lsa"));
     }
 }

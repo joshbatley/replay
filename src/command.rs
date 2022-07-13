@@ -1,7 +1,4 @@
-use std::{
-    io::{self, Write},
-    process::Command,
-};
+use std::process::Command;
 
 use log::warn;
 use serde::{Deserialize, Serialize};

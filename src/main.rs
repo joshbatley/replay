@@ -1,11 +1,12 @@
 use crate::flags::Commands;
 use clap::Parser;
-use file::File;
+use file::{File, FILE_LOCATION};
 use log::LevelFilter;
 
 mod command;
 mod file;
 mod flags;
+mod test;
 
 fn main() {
     // if (setup) {
@@ -16,7 +17,7 @@ fn main() {
     //     // check if update
     // }
 
-    let config = File::new();
+    let config = File::new(FILE_LOCATION);
     let cmd = Commands::parse();
     setup_logger(cmd.verbose, cmd.show_output);
     // flags(&cmd);

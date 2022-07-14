@@ -1,9 +1,9 @@
-use std::{fs, string};
+use std::fs;
 use toml_edit::Document;
 
 use crate::command::Cmd;
 
-const FILE_LOCATION: &str = "./config.toml";
+pub const FILE_LOCATION: &str = "./config.toml";
 const CURRENT_CMD_ID: &str = "current";
 
 // type Id = String;
@@ -19,15 +19,15 @@ pub struct File {
     config: Document,
 }
 impl File {
-    pub fn new() -> Self {
-        let file = File::open_file();
+    pub fn new(file: &str) -> Self {
+        let file = File::open_file(file);
         File {
             raw_file: file.clone(),
             config: file.parse::<Document>().unwrap(),
         }
     }
-    fn open_file() -> String {
-        fs::read_to_string(FILE_LOCATION).unwrap()
+    fn open_file(file: &str) -> String {
+        fs::read_to_string(file).unwrap()
     }
 
     fn create_file() {}
@@ -78,10 +78,13 @@ impl File {
 
 #[cfg(test)]
 mod test {
+    use crate::test::{setup, TEST_FILE};
+
     use super::*;
 
     #[test]
     fn save_cmd_works() {
+        let s = setup();
         let cmd = Cmd {
             script: "ls -lsa".to_string(),
             added: "2022-07-04T16:05:32.032Z".to_string(),
@@ -89,13 +92,14 @@ mod test {
             last_runs_successful: None,
             last_runs_output: None,
         };
-        let mut file = File::new();
+        let mut file = File::new(TEST_FILE);
         file.save_cmd("new-script", &cmd);
         assert!(file.config.to_string().contains("new-script"));
     }
 
     #[test]
     fn save_cmd_updates() {
+        let s = setup();
         let cmd = Cmd {
             script: "ls -lsa".to_string(),
             added: "2022-07-04T16:05:32.032Z".to_string(),
@@ -104,7 +108,7 @@ mod test {
             last_runs_output: None,
         };
 
-        let mut file = File::new();
+        let mut file = File::new(TEST_FILE);
         file.save_cmd("example", &cmd);
         assert!(file.config.to_string().contains("ls -lsa"));
     }

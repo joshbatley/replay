@@ -25,4 +25,7 @@ pub struct Commands {
 
     #[clap(short, long, value_parser)]
     pub verbose: bool,
+
+    #[clap(short, long, value_parser)]
+    pub config: Option<String>,
 }

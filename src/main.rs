@@ -1,25 +1,18 @@
-use crate::flags::Commands;
+use crate::{config::Config, flags::Commands};
 use clap::Parser;
-use file::{File, FILE_LOCATION};
 use log::LevelFilter;
 
 mod command;
-mod file;
+mod config;
+mod file_utils;
 mod flags;
 mod test;
 
 fn main() {
-    // if (setup) {
-    //     // create file
-    // }
-
-    // if (update_aviable) {
-    //     // check if update
-    // }
-
-    let config = File::new(FILE_LOCATION);
     let cmd = Commands::parse();
+    let config = Config::new(cmd.config);
     setup_logger(cmd.verbose, cmd.show_output);
+
     // flags(&cmd);
 
     config.get_cmd("example");

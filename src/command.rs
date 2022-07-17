@@ -1,7 +1,6 @@
-use std::process::Command;
-
 use log::warn;
 use serde::{Deserialize, Serialize};
+use std::process::Command;
 use toml_edit::InlineTable;
 
 #[derive(Deserialize, Serialize, Default)]
@@ -74,51 +73,6 @@ fn cmd(first: &str, args: &[&str]) {
 
     warn!("{}", std::str::from_utf8(&out.stdout).unwrap());
 }
-
-// impl Config {
-//     fn add_new_script(self) {}
-//
-//     fn update_script(self, id: String) {}
-//
-//     fn output(&self) -> String {
-//         let s = toml_edit::easy::to_string(&self).unwrap();
-//         let mut q = s.parse::<Document>().unwrap();
-//         let scripts = q
-//             .get("scripts")
-//             .unwrap()
-//             .to_owned()
-//             .as_inline_table()
-//             .unwrap()
-//             .to_owned()
-//             .into_table();
-//
-//         q.insert("scripts", toml_edit::Item::Table(s));
-//         q.to_string()
-//     }
-//
-//     fn to_toml(&self, item: &str) -> toml_edit::Item {
-//         let table: toml_edit::Item = {
-//             let mut table = InlineTable::default();
-//             table.insert("script", self.scripts[item].script.as_str().into());
-//             table.insert("added", self.scripts[item].added.as_str().into());
-//             toml_edit::value(toml_edit::Value::InlineTable(table))
-//         };
-//         table
-//     }
-//
-//     fn print_values(self) {
-//         println!("Current: {}", self.current);
-//         self.scripts.iter().enumerate().for_each(|(i, (k, v))| {
-//             println!(
-//                 "{} - Id: {} - Script: [{}] - Added: {}",
-//                 i + 1,
-//                 k.as_str().green(),
-//                 v.script.as_str().blue(),
-//                 v.added.to_string().magenta()
-//             )
-//         });
-//     }
-// }
 
 #[cfg(test)]
 mod tests {

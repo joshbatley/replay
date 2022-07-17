@@ -1,61 +1,46 @@
-use std::fs;
+use crate::{command::Cmd, file_utils};
 use toml_edit::Document;
 
-use crate::command::Cmd;
-
-pub const FILE_LOCATION: &str = "./config.toml";
 const CURRENT_CMD_ID: &str = "current";
 
-// type Id = String;
-// #[derive(Deserialize, Serialize)]
-// #[serde(rename_all = "kebab-case")]
-// pub struct Config {
-//     current: Id,
-//     scripts: HashMap<Id, Cmd>,
-// }
-
-pub struct File {
+#[derive(Clone)]
+pub struct Config {
     raw_file: String,
-    config: Document,
+    doc: Document,
+    path: String,
 }
-impl File {
-    pub fn new(file: &str) -> Self {
-        let file = File::open_file(file);
-        File {
+
+pub fn is_valid_config(path: &str) -> bool {
+    false
+}
+
+impl Config {
+    pub fn new(path: Option<String>) -> Self {
+        let (path, file) = file_utils::open_file(path);
+        Config {
             raw_file: file.clone(),
-            config: file.parse::<Document>().unwrap(),
+            doc: file.parse::<Document>().unwrap(),
+            path,
         }
     }
-    fn open_file(file: &str) -> String {
-        fs::read_to_string(file).unwrap()
-    }
-
-    fn create_file() {}
-
-    fn file_exist() -> bool {
-        false
-    }
-
-    pub fn get_current_cmd(&self) -> Cmd {
-        let current_id = self.config.get(CURRENT_CMD_ID).unwrap();
+    fn get_current_cmd(&self) -> Cmd {
+        let current_id = self.doc.get(CURRENT_CMD_ID).unwrap();
         self.get_cmd(current_id.as_str().unwrap())
     }
 
     pub fn save_file(&self) {
-        let config_str = self.config.to_string();
-        println!("{}", config_str);
-        // fs::write(FILE_LOCATION, self.config.output()).unwrap()
+        file_utils::save_file(self.doc.to_string(), self.path.to_string())
     }
 
     pub fn get_cmd(&self, key: &str) -> Cmd {
-        let all_scripts = self.config.get("scripts").unwrap();
+        let all_scripts = self.doc.get("scripts").unwrap();
         let cmd = Cmd::from_toml(all_scripts.get(key).unwrap());
         cmd.run_cmd();
         cmd
     }
 
     pub fn save_cmd(&mut self, key: &str, cmd: &Cmd) {
-        let all_scripts = self.config.get_mut("scripts").unwrap();
+        let all_scripts = self.doc.get_mut("scripts").unwrap();
         if all_scripts.get(key).is_some() {
             let script = all_scripts
                 .get_mut(key)
@@ -71,9 +56,8 @@ impl File {
                 .unwrap()
                 .insert(key, cmd.to_toml().to_owned());
         }
+        self.save_file();
     }
-
-    // pub fn show_all_scripts(self) {}
 }
 
 #[cfg(test)]
@@ -92,9 +76,9 @@ mod test {
             last_runs_successful: None,
             last_runs_output: None,
         };
-        let mut file = File::new(TEST_FILE);
+        let mut file = Config::new(Some(TEST_FILE.to_string()));
         file.save_cmd("new-script", &cmd);
-        assert!(file.config.to_string().contains("new-script"));
+        assert!(file.doc.to_string().contains("new-script"));
     }
 
     #[test]
@@ -108,8 +92,11 @@ mod test {
             last_runs_output: None,
         };
 
-        let mut file = File::new(TEST_FILE);
+        let mut file = Config::new(Some(TEST_FILE.to_string()));
         file.save_cmd("example", &cmd);
-        assert!(file.config.to_string().contains("ls -lsa"));
+        assert!(file
+            .doc
+            .to_string()
+            .contains("example = { script = \"ls -lsa\""));
     }
 }

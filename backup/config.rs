@@ -23,6 +23,7 @@ impl Config {
             path,
         }
     }
+
     fn get_current_cmd(&self) -> Cmd {
         let current_id = self.doc.get(CURRENT_CMD_ID).unwrap();
         self.get_cmd(current_id.as_str().unwrap())

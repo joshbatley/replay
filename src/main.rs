@@ -1,34 +1,47 @@
-use crate::{config::Config, flags::Commands};
 use clap::Parser;
-use log::LevelFilter;
+use std::process::{Command, Output};
 
-mod command;
-mod config;
-mod file_utils;
-mod flags;
-mod test;
+#[derive(Parser)]
+#[clap(author, version, about, long_about = None)]
+pub struct Commands {
+    #[clap(value_parser)]
+    pub run: String,
+}
 
 fn main() {
     let cmd = Commands::parse();
-    let config = Config::new(cmd.config);
-    setup_logger(cmd.verbose, cmd.show_output);
-
-    // flags(&cmd);
-
-    config.get_cmd("example");
-}
-
-fn setup_logger(is_verbose: bool, show_output: bool) {
-    let level: LevelFilter = if is_verbose {
-        LevelFilter::Debug
-    } else if show_output {
-        LevelFilter::Info
-    } else {
-        LevelFilter::Warn
+    match run_cmd(&cmd.run) {
+        Ok(res) => println!("{}", String::from_utf8(res.stdout).unwrap()),
+        Err(_) => println!("Command could not be ran"),
     };
-    env_logger::Builder::new().filter_level(level).init();
 }
 
-// fn setup() {}
+fn run_cmd(cmd: &String) -> Result<Output, std::io::Error> {
+    if let [first, tail @ ..] = &cmd.split_whitespace().collect::<Vec<&str>>()[..] {
+        Command::new(&first).args(tail).output()
+    } else {
+        panic!("Need to set up correct error")
+    }
+}
 
-// fn update() {}
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn run_cmd_should_return_response_of_valid_cmd() {
+        let test_command = String::from("echo hello world");
+        let result = run_cmd(&test_command).unwrap();
+        let result_str = String::from_utf8(result.stdout).unwrap();
+
+        assert_eq!("hello world\n", result_str);
+    }
+
+    #[test]
+    fn run_cmd_should_return_error_if_command_failed() {
+        let test_command = String::from("ehco hello world");
+        let result = run_cmd(&test_command);
+
+        assert!(result.is_err());
+    }
+}

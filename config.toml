@@ -1,5 +1,0 @@
-current = "example"
-
-[scripts]
-example = { script = "curl https://jsonplaceholder.typicode.com/todos/1", added = "2022-07-04T16:05:32.032Z", timeout = 0 }
-example2 = { script = "curl https://localhost:5002", added = "2022-07-04T16:05:32.032Z", timeout = 0 }

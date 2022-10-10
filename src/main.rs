@@ -1,8 +1,11 @@
 use clap::Parser;
-use std::{
-    fs,
-    process::{Command, Output},
-};
+use mockall_double::double;
+use std::process::{Command, Output};
+
+#[double]
+use file_api::FileApi;
+
+mod file_api;
 
 const BASE_CONFIG_PATH: &str = "./config.toml";
 
@@ -11,13 +14,18 @@ const BASE_CONFIG_PATH: &str = "./config.toml";
 pub struct Commands {
     #[clap(value_parser)]
     pub run: Option<String>,
+
     #[clap(short, long, value_parser, default_value_t = String::from(BASE_CONFIG_PATH))]
     pub config: String,
 }
 
 fn main() {
     let parse_commands = Commands::parse();
-    let cmd = get_command(parse_commands);
+    let (cmd, is_new_cmd) = get_command(&parse_commands);
+
+    if is_new_cmd {
+        update_command(&parse_commands.config, &cmd);
+    }
 
     match run_cmd(&cmd) {
         Ok(res) => println!("{}", String::from_utf8(res.stdout).unwrap()),
@@ -25,20 +33,17 @@ fn main() {
     };
 }
 
-fn get_command(parse_commands: Commands) -> String {
+fn get_command(parse_commands: &Commands) -> (String, bool) {
     if parse_commands.run.is_none() {
-        load_last_cmd(&parse_commands.config)
+        (load_last_cmd(&parse_commands.config), false)
     } else {
-        parse_commands.run.unwrap().to_owned()
+        let command = parse_commands.run.as_ref().unwrap();
+        (command.to_string(), true)
     }
 }
 
 fn load_last_cmd(path: &String) -> String {
-    if fs::metadata(path).is_ok() {
-        fs::read_to_string(path).unwrap()
-    } else {
-        panic!("asdas")
-    }
+    FileApi::read_file(path)
 }
 
 fn run_cmd(cmd: &String) -> Result<Output, std::io::Error> {
@@ -49,50 +54,43 @@ fn run_cmd(cmd: &String) -> Result<Output, std::io::Error> {
     }
 }
 
+fn update_command(path: &String, cmd: &String) {
+    FileApi::save_file(path, cmd)
+}
+
 #[cfg(test)]
 mod test {
-    use std::{fs, io::Write};
-
     use super::*;
-
-    const TEST_FILE: &str = "./test.toml";
-    const TEST_SCRIPT: &str = "echo loaded from file";
-
-    pub struct TestFile;
-
-    fn setup() -> TestFile {
-        let mut file = fs::File::create(TEST_FILE).unwrap();
-        file.write(TEST_SCRIPT.as_bytes()).unwrap();
-        TestFile {}
-    }
-    impl Drop for TestFile {
-        fn drop(&mut self) {
-            fs::remove_file(TEST_FILE).unwrap();
-        }
-    }
+    use crate::file_api::MockFileApi;
+    pub const TEST_FILE: &str = "./test.toml";
+    pub const TEST_SCRIPT: &str = "echo loaded from file";
 
     #[test]
     fn get_last_command_gives_passed_command() {
         let cmd = String::from("echo loaded from args");
         let parse_command = Commands {
             run: Some(cmd.to_owned()),
-            config: TEST_FILE.to_owned(),
+            config: "".to_owned(),
         };
-        let command = get_command(parse_command);
+        let (command, new_command) = get_command(&parse_command);
 
-        assert_eq!(command, cmd)
+        assert_eq!(command, cmd);
+        assert_eq!(new_command, true);
     }
 
     #[test]
     fn get_last_command_reads_from_file_if_no_commands_supplied() {
-        let _s = setup();
+        let ctx = MockFileApi::read_file_context();
+        ctx.expect().return_const(TEST_SCRIPT);
+
         let parse_command = Commands {
             run: None,
             config: TEST_FILE.to_owned(),
         };
-        let command = get_command(parse_command);
+        let (command, new_command) = get_command(&parse_command);
 
-        assert_eq!(command, TEST_SCRIPT)
+        assert_eq!(command, TEST_SCRIPT);
+        assert_eq!(new_command, false);
     }
 
     #[test]
@@ -110,5 +108,18 @@ mod test {
         let result = run_cmd(&test_command);
 
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn update_command_updates_file() {
+        let ctx = MockFileApi::save_file_context();
+        let ctx_2 = MockFileApi::read_file_context();
+        ctx.expect().return_const(());
+        ctx_2.expect().returning(|_| "echo new script".to_owned());
+
+        update_command(&TEST_FILE.to_string(), &String::from("echo new script"));
+        let file = load_last_cmd(&String::from(""));
+
+        assert_eq!(file, String::from("echo new script"))
     }
 }

@@ -17,7 +17,7 @@ impl FileApi {
         fs::metadata(path).is_ok()
     }
 
-    pub fn save_file(path: &String, contents: &String) {
+    pub fn save_file(path: &String, contents: &str) {
         fs::write(path, contents).unwrap()
     }
 }

@@ -54,7 +54,7 @@ fn run_cmd(cmd: &String) -> Result<Output, std::io::Error> {
     }
 }
 
-fn update_command(path: &String, cmd: &String) {
+fn update_command(path: &String, cmd: &str) {
     FileApi::save_file(path, cmd)
 }
 
@@ -113,13 +113,9 @@ mod test {
     #[test]
     fn update_command_updates_file() {
         let ctx = MockFileApi::save_file_context();
-        let ctx_2 = MockFileApi::read_file_context();
-        ctx.expect().return_const(());
-        ctx_2.expect().returning(|_| "echo new script".to_owned());
+        ctx.expect()
+            .returning(move |_, file| assert_eq!(file, String::from("echo new script")));
 
         update_command(&TEST_FILE.to_string(), &String::from("echo new script"));
-        let file = load_last_cmd(&String::from(""));
-
-        assert_eq!(file, String::from("echo new script"))
     }
 }

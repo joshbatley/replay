@@ -17,6 +17,9 @@ pub struct Commands {
 
     #[clap(short, long, value_parser, default_value_t = String::from(BASE_CONFIG_PATH))]
     pub config: String,
+
+    #[clap(short, long, value_parser, default_value_t = false)]
+    pub show_output: bool,
 }
 
 fn main() {
@@ -28,7 +31,7 @@ fn main() {
     }
 
     match run_cmd(&cmd) {
-        Ok(res) => println!("{}", String::from_utf8(res.stdout).unwrap()),
+        Ok(res) => print_output(&parse_commands.show_output, res),
         Err(_) => println!("Command could not be ran"),
     };
 }
@@ -42,16 +45,24 @@ fn get_command(parse_commands: &Commands) -> (String, bool) {
     }
 }
 
-fn load_last_cmd(path: &String) -> String {
-    FileApi::read_file(path)
-}
-
 fn run_cmd(cmd: &String) -> Result<Output, std::io::Error> {
     if let [first, tail @ ..] = &cmd.split_whitespace().collect::<Vec<&str>>()[..] {
         Command::new(&first).args(tail).output()
     } else {
         panic!("Need to set up correct error")
     }
+}
+
+fn print_output(show_output: &bool, response: Output) {
+    if !show_output {
+        return;
+    }
+    let output = String::from_utf8(response.stdout).unwrap();
+    println!("{}", output)
+}
+
+fn load_last_cmd(path: &String) -> String {
+    FileApi::read_file(path)
 }
 
 fn update_command(path: &String, cmd: &str) {
@@ -71,6 +82,7 @@ mod test {
         let parse_command = Commands {
             run: Some(cmd.to_owned()),
             config: "".to_owned(),
+            show_output: false,
         };
         let (command, new_command) = get_command(&parse_command);
 
@@ -86,6 +98,7 @@ mod test {
         let parse_command = Commands {
             run: None,
             config: TEST_FILE.to_owned(),
+            show_output: false,
         };
         let (command, new_command) = get_command(&parse_command);
 

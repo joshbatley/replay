@@ -64,8 +64,7 @@ fn print_output(show_output: &bool, response: Output) {
 #[cfg(test)]
 mod test {
     use super::*;
-    pub const TEST_FILE: &str = "./test.toml";
-    pub const TEST_SCRIPT: &str = "echo loaded from file";
+    const TEST_SCRIPT: &str = "echo loaded from file";
 
     struct ConfigTest {}
     impl ConfigFile for ConfigTest {
@@ -96,7 +95,7 @@ mod test {
         let mock_config = ConfigTest {};
         let parse_command = Commands {
             run: None,
-            config: TEST_FILE.to_owned(),
+            config: "".to_owned(),
             show_output: false,
         };
         let (command, new_command) = get_command(&parse_command, &mock_config);

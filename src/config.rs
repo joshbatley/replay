@@ -34,7 +34,6 @@ impl ConfigFile for Config {
 mod test {
     use super::*;
     use crate::file_api::MockFileApi;
-    pub const TEST_FILE: &str = "./test.toml";
 
     #[test]
     fn update_command_updates_file() {

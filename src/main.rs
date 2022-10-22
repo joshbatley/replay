@@ -22,11 +22,11 @@ pub struct Commands {
 
 fn main() {
     let parse_commands = Commands::parse();
-    let config = Config::new();
+    let config = Config::new(&parse_commands.config);
     let (cmd, is_new_cmd) = get_command(&parse_commands, &config);
 
     if is_new_cmd {
-        config.update_command(&parse_commands.config, &cmd);
+        config.update_command(&cmd);
         //  update_command(&parse_commands.config, &cmd);
     }
 
@@ -38,7 +38,7 @@ fn main() {
 
 fn get_command(parse_commands: &Commands, config: &impl ConfigFile) -> (String, bool) {
     if parse_commands.run.is_none() {
-        (config.load_last_command(&parse_commands.config), false)
+        (config.load_last_command(), false)
     } else {
         let command = parse_commands.run.as_ref().unwrap();
         (command.to_string(), true)
@@ -69,11 +69,11 @@ mod test {
 
     struct ConfigTest {}
     impl ConfigFile for ConfigTest {
-        fn load_last_command(&self, _: &String) -> String {
+        fn load_last_command(&self) -> String {
             TEST_SCRIPT.to_owned()
         }
 
-        fn update_command(&self, _: &String, _: &str) {}
+        fn update_command(&self, _: &str) {}
     }
 
     #[test]

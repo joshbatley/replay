@@ -1,10 +1,8 @@
 use clap::Parser;
-use mockall_double::double;
+use config::{Config, ConfigFile};
 use std::process::{Command, Output};
 
-#[double]
-use file_api::FileApi;
-
+mod config;
 mod file_api;
 
 const BASE_CONFIG_PATH: &str = "./config.toml";
@@ -24,10 +22,12 @@ pub struct Commands {
 
 fn main() {
     let parse_commands = Commands::parse();
-    let (cmd, is_new_cmd) = get_command(&parse_commands);
+    let config = Config::new();
+    let (cmd, is_new_cmd) = get_command(&parse_commands, &config);
 
     if is_new_cmd {
-        update_command(&parse_commands.config, &cmd);
+        config.update_command(&parse_commands.config, &cmd);
+        //  update_command(&parse_commands.config, &cmd);
     }
 
     match run_cmd(&cmd) {
@@ -36,9 +36,9 @@ fn main() {
     };
 }
 
-fn get_command(parse_commands: &Commands) -> (String, bool) {
+fn get_command(parse_commands: &Commands, config: &impl ConfigFile) -> (String, bool) {
     if parse_commands.run.is_none() {
-        (load_last_cmd(&parse_commands.config), false)
+        (config.load_last_command(&parse_commands.config), false)
     } else {
         let command = parse_commands.run.as_ref().unwrap();
         (command.to_string(), true)
@@ -61,30 +61,31 @@ fn print_output(show_output: &bool, response: Output) {
     println!("{}", output)
 }
 
-fn load_last_cmd(path: &String) -> String {
-    FileApi::read_file(path)
-}
-
-fn update_command(path: &String, cmd: &str) {
-    FileApi::save_file(path, cmd)
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::file_api::MockFileApi;
     pub const TEST_FILE: &str = "./test.toml";
     pub const TEST_SCRIPT: &str = "echo loaded from file";
+
+    struct ConfigTest {}
+    impl ConfigFile for ConfigTest {
+        fn load_last_command(&self, _: &String) -> String {
+            TEST_SCRIPT.to_owned()
+        }
+
+        fn update_command(&self, _: &String, _: &str) {}
+    }
 
     #[test]
     fn get_last_command_gives_passed_command() {
         let cmd = String::from("echo loaded from args");
+        let mock_config = ConfigTest {};
         let parse_command = Commands {
             run: Some(cmd.to_owned()),
             config: "".to_owned(),
             show_output: false,
         };
-        let (command, new_command) = get_command(&parse_command);
+        let (command, new_command) = get_command(&parse_command, &mock_config);
 
         assert_eq!(command, cmd);
         assert_eq!(new_command, true);
@@ -92,15 +93,13 @@ mod test {
 
     #[test]
     fn get_last_command_reads_from_file_if_no_commands_supplied() {
-        let ctx = MockFileApi::read_file_context();
-        ctx.expect().return_const(TEST_SCRIPT);
-
+        let mock_config = ConfigTest {};
         let parse_command = Commands {
             run: None,
             config: TEST_FILE.to_owned(),
             show_output: false,
         };
-        let (command, new_command) = get_command(&parse_command);
+        let (command, new_command) = get_command(&parse_command, &mock_config);
 
         assert_eq!(command, TEST_SCRIPT);
         assert_eq!(new_command, false);
@@ -121,14 +120,5 @@ mod test {
         let result = run_cmd(&test_command);
 
         assert!(result.is_err());
-    }
-
-    #[test]
-    fn update_command_updates_file() {
-        let ctx = MockFileApi::save_file_context();
-        ctx.expect()
-            .returning(move |_, file| assert_eq!(file, String::from("echo new script")));
-
-        update_command(&TEST_FILE.to_string(), &String::from("echo new script"));
     }
 }

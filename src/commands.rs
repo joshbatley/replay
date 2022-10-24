@@ -24,7 +24,7 @@ impl Commands {
 
     pub fn get_command(&self, config: &impl ConfigFile) -> (String, bool) {
         if self.run.is_none() {
-            (config.load_last_command(), false)
+            (config.load_last_command().to_string(), false)
         } else {
             let command = self.run.as_ref().unwrap();
             (command.to_owned(), true)
@@ -39,11 +39,11 @@ mod test {
 
     struct ConfigTest {}
     impl ConfigFile for ConfigTest {
-        fn load_last_command(&self) -> String {
-            TEST_SCRIPT.to_owned()
+        fn load_last_command(&self) -> &str {
+            TEST_SCRIPT
         }
 
-        fn update_command(&self, _: &str) {}
+        fn update_command(&mut self, _: &str) {}
     }
 
     #[test]

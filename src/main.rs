@@ -8,7 +8,7 @@ mod file_api;
 
 fn main() {
     let parse_commands = Commands::new();
-    let config = Config::new(&parse_commands.config);
+    let mut config = Config::new(&parse_commands.config);
     let (cmd, is_new_cmd) = parse_commands.get_command(&config);
 
     if is_new_cmd {

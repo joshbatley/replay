@@ -1,7 +1,7 @@
 use mockall::automock;
 use std::fs;
 
-pub struct FileApi;
+pub struct FileApi {}
 
 #[automock()]
 impl FileApi {
@@ -13,7 +13,7 @@ impl FileApi {
         fs::read_to_string(path).unwrap()
     }
 
-    pub fn is_valid_path(path: &str) -> bool {
+    fn is_valid_path(path: &str) -> bool {
         fs::metadata(path).is_ok()
     }
 

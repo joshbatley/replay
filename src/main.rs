@@ -9,10 +9,10 @@ mod file_api;
 fn main() {
     let parse_commands = Commands::new();
     let mut config = Config::new(&parse_commands.config);
-    let (cmd, is_new_cmd) = parse_commands.get_command(&config);
+    let (cmd, key) = parse_commands.get_command(&config);
 
-    if is_new_cmd {
-        config.update_command(&cmd);
+    if parse_commands.is_new_command {
+        config.update_command(&cmd, key);
     }
 
     match run_cmd(&cmd) {

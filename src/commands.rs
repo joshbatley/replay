@@ -1,6 +1,5 @@
+use crate::config::{ConfigFile, CURRENT_CMD_ID};
 use clap::Parser;
-
-use crate::config::ConfigFile;
 
 const BASE_CONFIG_PATH: &str = "./config.toml";
 
@@ -15,19 +14,34 @@ pub struct Commands {
 
     #[clap(short, long, value_parser, default_value_t = false)]
     pub show_output: bool,
+
+    #[clap(short, long, value_parser)]
+    pub run_command: Option<String>,
+
+    #[clap(skip)]
+    pub is_new_command: bool,
 }
 
 impl Commands {
     pub fn new() -> Commands {
-        Commands::parse()
+        let mut parsed = Commands::parse();
+        if parsed.run.is_none() && parsed.run_command.is_none() {
+            parsed.is_new_command = true;
+        }
+        return parsed;
     }
 
-    pub fn get_command(&self, config: &impl ConfigFile) -> (String, bool) {
+    pub fn get_command(&self, config: &impl ConfigFile) -> (String, &str) {
+        if self.run_command.is_some() {
+            let key = self.run_command.as_ref().unwrap().as_str();
+            return (config.load_command(key), key);
+        }
+
         if self.run.is_none() {
-            (config.load_last_command().to_string(), false)
+            (config.load_command(CURRENT_CMD_ID), CURRENT_CMD_ID)
         } else {
             let command = self.run.as_ref().unwrap();
-            (command.to_owned(), true)
+            (command.to_owned(), CURRENT_CMD_ID)
         }
     }
 }
@@ -39,11 +53,11 @@ mod test {
 
     struct ConfigTest {}
     impl ConfigFile for ConfigTest {
-        fn load_last_command(&self) -> &str {
-            TEST_SCRIPT
+        fn load_command(&self, _: &str) -> String {
+            TEST_SCRIPT.to_owned()
         }
 
-        fn update_command(&mut self, _: &str) {}
+        fn update_command(&mut self, _: &String, _: &str) {}
     }
 
     #[test]
@@ -54,11 +68,12 @@ mod test {
             run: Some(cmd.to_owned()),
             config: "".to_owned(),
             show_output: false,
+            run_command: None,
+            is_new_command: false,
         };
-        let (command, new_command) = parse_command.get_command(&mock_config);
+        let (command, _) = parse_command.get_command(&mock_config);
 
         assert_eq!(command, cmd);
-        assert_eq!(new_command, true);
     }
 
     #[test]
@@ -68,10 +83,11 @@ mod test {
             run: None,
             config: "".to_owned(),
             show_output: false,
+            run_command: None,
+            is_new_command: false,
         };
-        let (command, new_command) = parse_command.get_command(&mock_config);
+        let (command, _) = parse_command.get_command(&mock_config);
 
         assert_eq!(command, TEST_SCRIPT);
-        assert_eq!(new_command, false);
     }
 }

@@ -4,17 +4,17 @@ use toml_edit::Document;
 #[double]
 use crate::file_api::FileApi;
 
+pub const CURRENT_CMD_ID: &str = "current";
+
 pub trait ConfigFile {
-    fn load_last_command(&self) -> &str;
-    fn update_command(&mut self, cmd: &str);
+    fn load_command(&self, key: &str) -> String;
+    fn update_command(&mut self, cmd: &String, key: &str);
 }
 
 pub struct Config {
     path: String,
     doc: Document,
 }
-
-const KEY: &str = "current";
 
 impl Config {
     pub fn new(path: &String) -> Self {
@@ -31,12 +31,13 @@ impl Config {
 }
 
 impl ConfigFile for Config {
-    fn load_last_command(&self) -> &str {
-        self.doc.get(KEY).unwrap().as_str().unwrap()
+    fn load_command(&self, key: &str) -> String {
+        // Add better error
+        self.doc.get(key).unwrap().as_str().unwrap().to_string()
     }
 
-    fn update_command(&mut self, cmd: &str) {
-        self.doc[KEY] = toml_edit::value(cmd);
+    fn update_command(&mut self, cmd: &String, key: &str) {
+        self.doc[key] = toml_edit::value(cmd);
         self.update_file();
     }
 }
@@ -48,11 +49,15 @@ mod test {
 
     #[test]
     fn update_command_updates_file() {
-        let mut config = Config::new(&String::from(""));
+        let mut config = Config {
+            path: String::from(""),
+            doc: Document::new(),
+        };
         let ctx = MockFileApi::save_file_context();
-        ctx.expect()
-            .returning(move |_, file| assert_eq!(file, String::from("echo new script")));
+        ctx.expect().returning(move |_, file| {
+            assert_eq!(file, String::from("current = \"echo new script\"\n"))
+        });
 
-        config.update_command(&String::from("echo new script"));
+        config.update_command(&String::from("echo new script"), CURRENT_CMD_ID);
     }
 }

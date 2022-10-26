@@ -8,7 +8,7 @@ pub const CURRENT_CMD_ID: &str = "current";
 
 pub trait ConfigFile {
     fn load_command(&self, key: &str) -> String;
-    fn update_command(&mut self, cmd: &String, key: &str);
+    fn update_command(&mut self, cmd: &String, key: String);
 }
 
 pub struct Config {
@@ -36,8 +36,8 @@ impl ConfigFile for Config {
         self.doc.get(key).unwrap().as_str().unwrap().to_string()
     }
 
-    fn update_command(&mut self, cmd: &String, key: &str) {
-        self.doc[key] = toml_edit::value(cmd);
+    fn update_command(&mut self, cmd: &String, key: String) {
+        self.doc[&key] = toml_edit::value(cmd);
         self.update_file();
     }
 }
@@ -58,6 +58,6 @@ mod test {
             assert_eq!(file, String::from("current = \"echo new script\"\n"))
         });
 
-        config.update_command(&String::from("echo new script"), CURRENT_CMD_ID);
+        config.update_command(&String::from("echo new script"), CURRENT_CMD_ID.to_string());
     }
 }

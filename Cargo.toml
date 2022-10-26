@@ -14,3 +14,4 @@ colored = "2.0.0"
 toml_edit = { version = "0.14.4", features=["serde", "easy"] }
 mockall = "0.11.2"
 mockall_double = "0.3.0"
+rand = "0.8.5"

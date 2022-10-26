@@ -1,5 +1,6 @@
 use crate::config::{ConfigFile, CURRENT_CMD_ID};
-use clap::{Args, Parser, Subcommand};
+use clap::{Parser, Subcommand};
+use rand::Rng;
 
 const BASE_CONFIG_PATH: &str = "./config.toml";
 
@@ -7,7 +8,7 @@ const BASE_CONFIG_PATH: &str = "./config.toml";
 #[clap(author, version, about, long_about = None)]
 pub struct Commands {
     #[clap(value_parser)]
-    pub run: Option<String>,
+    pub run: Option<Vec<String>>,
 
     #[command(subcommand)]
     pub command: Option<Subcommands>,
@@ -25,54 +26,71 @@ pub struct Commands {
 
     #[clap(skip)]
     pub command_type: CommandType,
+
+    #[clap(skip)]
+    pub command_friendly: String,
 }
 
 #[derive(Subcommand)]
 pub enum Subcommands {
-    Run(Flags),
-}
+    Run {
+        #[clap(value_parser)]
+        id: Option<String>,
+    },
+    Save {
+        #[clap(value_parser)]
+        cmd: Option<String>,
 
-#[derive(Args)]
-pub struct Flags {
-    #[clap(value_parser)]
-    pub id: Option<String>,
+        #[clap(value_parser)]
+        id: Option<String>,
+    },
 }
 
 #[derive(Default, PartialEq, Eq)]
 pub enum CommandType {
-    Exec,
-    Update,
     #[default]
-    None,
+    Exec,
+    ExecAndUpdate,
+    Update,
 }
 
 impl Commands {
     pub fn new() -> Commands {
         let mut parsed = Commands::parse();
-        let command_type = match &parsed.command {
-            Some(Subcommands::Run(_)) => CommandType::Exec,
-            None => CommandType::None,
+        let mut command_type = match &parsed.command {
+            Some(Subcommands::Run { .. }) => CommandType::Exec,
+            Some(Subcommands::Save { .. }) => CommandType::Update,
+            None => CommandType::Exec,
         };
-        if parsed.run.is_some() && command_type != CommandType::Exec {
-            parsed.is_new_command = true;
+        let is_run = parsed.run.clone().is_some();
+        if is_run {
+            command_type = CommandType::ExecAndUpdate;
+            parsed.command_friendly = parsed.run.clone().unwrap().join(" ");
         }
         parsed.command_type = command_type;
         return parsed;
     }
 
-    pub fn get_command(&self, config: &impl ConfigFile) -> (String, &str) {
+    pub fn get_command(&self, config: &impl ConfigFile) -> (String, String) {
         match &self.command {
-            Some(Subcommands::Run(cmd)) => {
-                let key = cmd.id.as_ref().unwrap().as_str();
-                return (config.load_command(key), key);
+            Some(Subcommands::Run { id }) => {
+                let key = id.as_ref().unwrap().as_str();
+                return (config.load_command(key), key.to_string());
+            }
+            Some(Subcommands::Save { cmd, id }) => {
+                let rnd = rand::thread_rng().gen_range(0..100).to_string();
+                let id = id.clone().unwrap_or(rnd);
+                return (cmd.clone().unwrap(), id);
             }
             _ => (),
         };
         if self.run.is_none() {
-            (config.load_command(CURRENT_CMD_ID), CURRENT_CMD_ID)
+            (
+                config.load_command(CURRENT_CMD_ID),
+                CURRENT_CMD_ID.to_string(),
+            )
         } else {
-            let command = self.run.as_ref().unwrap();
-            (command.to_owned(), CURRENT_CMD_ID)
+            (self.command_friendly.clone(), CURRENT_CMD_ID.to_string())
         }
     }
 }
@@ -88,24 +106,30 @@ mod test {
             TEST_SCRIPT.to_owned()
         }
 
-        fn update_command(&mut self, _: &String, _: &str) {}
+        fn update_command(&mut self, _: &String, _: String) {}
     }
 
     #[test]
     fn get_last_command_gives_passed_command() {
-        let cmd = String::from("echo loaded from args");
+        let cmd = vec![
+            "echo".to_string(),
+            "loaded".to_string(),
+            "from".to_string(),
+            "args".to_string(),
+        ];
         let mock_config = ConfigTest {};
         let parse_command = Commands {
-            run: Some(cmd.to_owned()),
+            run: Some(cmd.clone()),
             config: "".to_owned(),
             show_output: false,
             is_new_command: false,
             command: None,
-            command_type: CommandType::None,
+            command_type: CommandType::Exec,
+            command_friendly: cmd.join(" "),
         };
         let (command, _) = parse_command.get_command(&mock_config);
 
-        assert_eq!(command, cmd);
+        assert_eq!(command, parse_command.command_friendly);
     }
 
     #[test]
@@ -117,7 +141,8 @@ mod test {
             show_output: false,
             is_new_command: false,
             command: None,
-            command_type: CommandType::None,
+            command_type: CommandType::Exec,
+            command_friendly: String::new(),
         };
         let (command, _) = parse_command.get_command(&mock_config);
 

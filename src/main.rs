@@ -1,4 +1,5 @@
-use commands::Commands;
+use clap::Subcommand;
+use commands::{CommandType, Commands, Subcommands};
 use config::{Config, ConfigFile};
 use std::process::{Command, Output};
 
@@ -11,14 +12,21 @@ fn main() {
     let mut config = Config::new(&parse_commands.config);
     let (cmd, key) = parse_commands.get_command(&config);
 
-    if parse_commands.is_new_command {
-        config.update_command(&cmd, key);
-    }
-
-    match run_cmd(&cmd) {
-        Ok(res) => print_output(&parse_commands.show_output, res),
-        Err(_) => println!("Command could not be ran"),
+    match parse_commands.command_type {
+        CommandType::Exec => exec_command(&cmd, &parse_commands.show_output),
+        CommandType::ExecAndUpdate => {
+            config.update_command(&cmd, key);
+            exec_command(&cmd, &parse_commands.show_output)
+        }
+        CommandType::Update => config.update_command(&cmd, key),
     };
+}
+
+fn exec_command(cmd: &String, show_output: &bool) {
+    match run_cmd(&cmd) {
+        Ok(res) => print_output(&show_output, res),
+        Err(_) => println!("Command could not be ran"),
+    }
 }
 
 fn run_cmd(cmd: &String) -> Result<Output, std::io::Error> {
